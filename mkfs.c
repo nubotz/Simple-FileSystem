@@ -46,10 +46,13 @@ typedef struct dir_mapping{ /* Record file information in directory file */
 
 
 int main(){
+	//set up the partition of HD
+	int fd = open ("HD", O_RDWR, 660);
+	lseek(fd, SB_OFFSET, SEEK_SET);
+	
 	struct superblock* sb;
-	struct inode* i_node[MAX_INODE];
-	int fd;
-
+	struct inode* i_node;
+	
 	sb = (struct superblock*)malloc(sizeof(struct superblock));
 	sb->inode_offset = INODE_OFFSET;
 	sb->data_offset = DATA_OFFSET;
@@ -59,47 +62,19 @@ int main(){
 	sb->next_available_inode = 0;
 	sb->next_available_blk = 0;
 	
+	write(fd, (void *)sb, sizeof(struct superblock));
 	
-	
-	printf("%i",sb->inode_offset);
-	
-	
-	
-	char str[100];
-	while(1){//loop user input
-		scanf("%s",str);
-
-		if(strcmp(str, "ls_t") == 0){
-			
-		}else if(strcmp(str, "mkfs_t") == 0){
-			int num = (sb->next_available_inode)++;
-			i_node[num] = (struct inode*)malloc(sizeof(struct inode));
-			i_node[num]->i_number = num;
-			i_node[num]->i_mtimetime(0);
-			i_node[num]->i_type = 1;
-			i_node[num]->i_size = 0;
-			i_node[num]->i_blocks = 0;
-			i_node[num]->file_num = 0;
-			
-			
-		}else if(strcmp(str, "cd_t") == 0){
-			
-		}else if(strcmp(str, "mkdir_t") == 0){
-			
-		}else if(strcmp(str, "external_cp") == 0){
-			
-		}else if(strcmp(str, "cp_t") == 0){
-			
-		}else if(strcmp(str, "cat_t") == 0){
-			
-		}else if(strcmp(str, "exit") == 0){
-			return 0;
-		}else{
-			printf("unknown command %s",str);
-		}
-		printf("\n$");
-	}
-	
+	//make the root directory
+	struct inode* i_node;
+	i_node = (struct inode*)malloc(sizeof(struct inode));
+	i_node->i_number = sb->next_available_inode;
+	i_node->i_mtime = time(0);
+	i_node->i_type = 0;
+	i_node->i_size = ;
+	i_node->i_blocks = ;
+	i_node->direct_blk[0] = ; i_node->direct_blk[1] = ;
+	i_node->indirect_blk = ;
+	i_node->file_num = 0;
 	
 	
 	/*
