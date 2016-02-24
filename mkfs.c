@@ -46,12 +46,13 @@ typedef struct dir_mapping{ /* Record file information in directory file */
 
 
 int main(){
+	printf("###making the filesystem, plz be patience...\n");
+
 	//set up the partition of HD
 	int fd = open ("HD", O_RDWR, 660);
-	lseek(fd, SB_OFFSET, SEEK_SET);
+	
 	
 	struct superblock* sb;
-	struct inode* i_node;
 	
 	sb = (struct superblock*)malloc(sizeof(struct superblock));
 	sb->inode_offset = INODE_OFFSET;
@@ -62,6 +63,7 @@ int main(){
 	sb->next_available_inode = 0;
 	sb->next_available_blk = 0;
 	
+	lseek(fd, SB_OFFSET, SEEK_SET);
 	write(fd, (void *)sb, sizeof(struct superblock));
 	
 	//make the root directory
@@ -70,29 +72,23 @@ int main(){
 	i_node->i_number = sb->next_available_inode;
 	i_node->i_mtime = time(0);
 	i_node->i_type = 0;
-	i_node->i_size = ;
-	i_node->i_blocks = ;
-	i_node->direct_blk[0] = ; i_node->direct_blk[1] = ;
-	i_node->indirect_blk = ;
+	i_node->i_size = 0;
+	i_node->i_blocks = 1;
+	i_node->direct_blk[0] = DATA_OFFSET + sb->next_available_blk * BLOCK_SIZE;
 	i_node->file_num = 0;
 	
-	
-	/*
-	fd = open ("myfile", O_RDWR, 660);
-	
-	lseek(fd, 1024, SEEK_SET);
+	lseek(fd, INODE_OFFSET, SEEK_SET);
+	write(fd, (void *)i_node, sizeof(struct inode));
 
-	write(fd, (void *)pxx, sizeof(struct xx));
+	//read back the root directory information
+	lseek(fd, INODE_OFFSET, SEEK_SET);
+	struct inode* temp = malloc(sizeof(struct inode));
 
-	lseek(fd, 1024, SEEK_SET);
-
-	read(fd, (void *)&y, sizeof(struct xx));
-
-	printf("offset-%d; seconds(1970.1.1)-%ld\n", y.xx_offset, y.xx_time);
-*/
+	read(fd, (void*)temp, sizeof(struct inode));
+	printf("###Done creating superblock and root.\n###root inode num is %i, create time is %i\n", temp->i_number, (int)temp->i_mtime);
 	return 0;
 }
-
+/*
 int open_t( const char *pathname, int flags){
 	
 }
@@ -104,3 +100,4 @@ int read_t( int inode_number, int offset, void *buf, int count){
 int write_t( int inode_number, int offset, void *buf, int count){
 	
 }
+*/
