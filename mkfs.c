@@ -50,20 +50,30 @@ int main(){
 	struct inode* temp = malloc(sizeof(struct inode));
 
 	read(fd, (void*)temp, sizeof(struct inode));
-	printf("###Done creating superblock and root.\n###root inode num is %i, create time is %i\n", temp->i_number, (int)temp->i_mtime);
+	printf("###Done creating superblock and root.\n###root inode num is %i, create time is %i, file_num is %d\n", temp->i_number, (int)temp->i_mtime, temp->file_num);
+
+
+
+	//add some file to test
+	//add hi.txt
+	(temp->file_num)++;
+	lseek(fd, INODE_OFFSET, SEEK_SET);
+	write(fd, (void *)temp, sizeof(struct inode));
+
+	DIR_NODE* dir_content=malloc(sizeof(DIR_NODE));
+	strcpy(dir_content->dir,"hi.txt");
+	dir_content->inode_number=123;
+	lseek(fd, temp->direct_blk[0], SEEK_SET);
+	write(fd, (void *)temp, sizeof(DIR_NODE));
+
+	printf("##modified test file, root inode num is %i, create time is %i, file_num is %d\n", temp->i_number, (int)temp->i_mtime, temp->file_num);
+
+
+
+	//test sfs open_t(const char *pathname, int flags)
+	open_t("/abc/hi.txt",0);
+
+
 
 	return 0;
 }
-/*
-int open_t( const char *pathname, int flags){
-
-}
-
-int read_t( int inode_number, int offset, void *buf, int count){
-
-}
-
-int write_t( int inode_number, int offset, void *buf, int count){
-
-}
-*/

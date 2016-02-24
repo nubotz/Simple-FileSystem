@@ -34,14 +34,45 @@ typedef struct dir_mapping{ /* Record file information in directory file */
 }DIR_NODE;
 
 
-
+//returns inode number of file or -1 if error
+//flag 0=new file; 1=new dir; 2=existing file;
 int open_t(const char *pathname, int flags){
   //split the pathname
-  //at most 12 '/'
-  //char* str = strtok(pathname, "/");
+  int count_slash = 0;
+	char* path_name = malloc(11);
+	strcpy(path_name, pathname);
+  char* str[11];
+	str[0] = strtok(path_name, "/");
+	printf("str[%d]=%s\n",count_slash,str[count_slash]);
+	count_slash++;
 
+	while(str[count_slash-1]!=NULL){
+		str[count_slash] = strtok(NULL, "/");
+		printf("str[%d]=%s\n",count_slash,str[count_slash]);
+		count_slash++;
+	}
 
-	
+	//scan the inodes, start from root dir
+	int fd = open("HD", O_RDWR, 660);
+	lseek(fd, INODE_OFFSET, SEEK_SET);
+	struct inode* temp = malloc(sizeof(struct inode));
+	read(fd, (void*)temp, sizeof(struct inode));
+	lseek(fd, temp->direct_blk[0], SEEK_SET);
+	int file_num_multiplier = temp->file_num;
+
+	//load the whole data block into ram
+	DIR_NODE* dir_content = (DIR_NODE*)malloc(BLOCK_SIZE);
+	read(fd, dir_content, BLOCK_SIZE);
+	//get the desired node number
+	int i;
+	for(i=0; i<file_num_multiplier; i++){
+		//assume no nesting at the moment
+		printf("dir is now%s\n",(dir_content[i*sizeof(DIR_NODE)]).dir);
+
+		if (strcmp((dir_content[i*sizeof(DIR_NODE)]).dir,str[count_slash-1])==0){
+			return dir_content[i].inode_number;
+		}
+	}
 
 }
 
