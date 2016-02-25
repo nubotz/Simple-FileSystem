@@ -41,7 +41,7 @@ int open_t(const char *pathname, int flags){
   int count_slash = 0;
 	char* path_name = malloc(11);
 	strcpy(path_name, pathname);
-  char* str[11];
+	char* str[11];
 	str[0] = strtok(path_name, "/");
 	printf("str[%d]=%s\n",count_slash,str[count_slash]);
 	count_slash++;
@@ -82,8 +82,21 @@ int open_t(const char *pathname, int flags){
 
 }
 
+//read up to count bytes from the inode number file
+//starting at offset, save into buf
+//return 0 if offset exceed file size; return -1 if error; return number of byte read.
 int read_t(int inode_number, int offset, void *buf, int count){
+	int fd = open("HD", O_RDWR, 660);
+	struct inode* temp = malloc(sizeof(struct inode));
+	lseek(fd, INODE_OFFSET+inode_number*sizeof(struct inode), SEEK_SET);
+	read(fd, (void*)temp, sizeof(struct inode));
 
+	if(offset >= temp->i_size){
+		return 0;
+	}
+
+	lseek(fd, temp->direct_blk[0]+offset, SEEK_SET);
+	return read(fd, buf, count);
 }
 
 int write_t(int inode_number, int offset, void *buf, int count){
