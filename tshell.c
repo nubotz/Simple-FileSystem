@@ -14,6 +14,7 @@ int main(){
 	printf("tshell###\n$");
 	char str[100];
 	char* currentPath = "/";
+	char* newDir = 
 	while(1){//loop user input
 		scanf("%s",str);
 
@@ -22,7 +23,7 @@ int main(){
 		}else if(strcmp(str, "cd_t") == 0){
 
 		}else if(strcmp(str, "mkdir_t") == 0){
-
+			execl("./mkdir_t", currentPath, (char *)0);
 		}else if(strcmp(str, "external_cp") == 0){
 
 		}else if(strcmp(str, "cp_t") == 0){

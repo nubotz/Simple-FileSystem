@@ -40,7 +40,7 @@ int main(){
 	i_node->i_size = 0;
 	i_node->i_blocks = 1;
 	i_node->direct_blk[0] = DATA_OFFSET + sb->next_available_blk * BLOCK_SIZE;
-	i_node->file_num = 0;
+	i_node->file_num = 2; //pre define . and ..
 
 	lseek(fd, INODE_OFFSET, SEEK_SET);
 	write(fd, (void *)i_node, sizeof(struct inode));
@@ -52,8 +52,17 @@ int main(){
 	read(fd, (void*)temp, sizeof(struct inode));
 	printf("###Done creating superblock and root.\n###root inode num is %i, create time is %i, file_num is %d\n", temp->i_number, (int)temp->i_mtime, temp->file_num);
 
+	//add . and ..
+	DIR_NODE* dir_content=malloc(sizeof(DIR_NODE));
+	strcpy(dir_content->dir,".");
+	dir_content->inode_number=0;
 
+	lseek(fd, temp->direct_blk[0], SEEK_SET);
+	write(fd, (void *)dir_content, sizeof(DIR_NODE));
+	strcpy(dir_content->dir,"..");
+	write(fd, (void *)dir_content, sizeof(DIR_NODE));
 
+/*
 	//add some file to test
 	//add hi.txt
 	(temp->file_num)++;
@@ -67,7 +76,7 @@ int main(){
 
 	lseek(fd, temp->direct_blk[0], SEEK_SET);
 	write(fd, (void *)dir_content, sizeof(DIR_NODE));
-
+*/
 	printf("##modified test file, root inode num is %i, create time is %i, file_num is %d\n", temp->i_number, (int)temp->i_mtime, temp->file_num);
 
 

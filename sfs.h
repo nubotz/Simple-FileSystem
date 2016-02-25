@@ -50,6 +50,11 @@ int open_t(const char *pathname, int flags){
 		printf("str[%d]=%s\n",count_slash,str[count_slash]);
 		count_slash++;
 	}
+	/*
+	printf("count_slash == %d",count_slash);
+	if(count_slash == 1){
+		return 0;
+	}*/
 
 	int fd = open("HD", O_RDWR, 660);
 
@@ -62,18 +67,21 @@ int open_t(const char *pathname, int flags){
 		read(fd, (void*)dir_node, sizeof(struct inode));
 		int dir_fileNum = dir_node->file_num;
 
+		if(i==count_slash-1){
+			return inum_desired;
+		}
+
 		//load the current directory data block into ram
 		DIR_NODE* dir_content = malloc(BLOCK_SIZE);
 		lseek(fd, dir_node->direct_blk[0], SEEK_SET);
 		read(fd, dir_content, BLOCK_SIZE);
 
+
 		for(j=0; j<dir_fileNum; j++){
 			printf("j=%d, %s == %s ????\n",j,str[i],(dir_content[j*sizeof(DIR_NODE)]).dir);
 			if (strcmp(str[i],(dir_content[j*sizeof(DIR_NODE)]).dir)==0){
 				inum_desired = (dir_content[j*sizeof(DIR_NODE)]).inode_number;
-				if(i==count_slash-1){
-					return inum_desired;
-				}
+
 				break;
 			}
 		}
