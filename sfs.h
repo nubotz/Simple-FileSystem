@@ -46,8 +46,7 @@ int open_t(const char *pathname, int flags){
 	printf("str[%d]=%s\n",count_slash,str[count_slash]);
 	count_slash++;
 
-	while(str[count_slash-1]!=NULL){
-		str[count_slash] = strtok(NULL, "/");
+	while((str[count_slash] = strtok(NULL, "/"))!=NULL){
 		printf("str[%d]=%s\n",count_slash,str[count_slash]);
 		count_slash++;
 	}
@@ -67,8 +66,7 @@ int open_t(const char *pathname, int flags){
 	int i;
 	for(i=0; i<file_num_multiplier; i++){
 		//assume no nesting at the moment
-		printf("dir is now%s\n",(dir_content[i*sizeof(DIR_NODE)]).dir);
-
+		printf("%s == %s ????\n",(dir_content[i*sizeof(DIR_NODE)]).dir,str[count_slash-1]);
 		if (strcmp((dir_content[i*sizeof(DIR_NODE)]).dir,str[count_slash-1])==0){
 			return dir_content[i].inode_number;
 		}
