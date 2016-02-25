@@ -51,26 +51,34 @@ int open_t(const char *pathname, int flags){
 		count_slash++;
 	}
 
-	//scan the inodes, start from root dir
 	int fd = open("HD", O_RDWR, 660);
-	lseek(fd, INODE_OFFSET, SEEK_SET);
-	struct inode* temp = malloc(sizeof(struct inode));
-	read(fd, (void*)temp, sizeof(struct inode));
-	lseek(fd, temp->direct_blk[0], SEEK_SET);
-	int file_num_multiplier = temp->file_num;
 
-	//load the whole data block into ram
-	DIR_NODE* dir_content = (DIR_NODE*)malloc(BLOCK_SIZE);
-	read(fd, dir_content, BLOCK_SIZE);
-	//get the desired node number
-	int i;
-	for(i=0; i<file_num_multiplier; i++){
-		//assume no nesting at the moment
-		printf("%s == %s ????\n",(dir_content[i*sizeof(DIR_NODE)]).dir,str[count_slash-1]);
-		if (strcmp((dir_content[i*sizeof(DIR_NODE)]).dir,str[count_slash-1])==0){
-			return dir_content[i].inode_number;
+	int inum_desired = 0;//start from root inode_num 0
+	int i, j;
+	for(i=0; i<count_slash; i++){
+		//scan the inodes, start from root dir
+		struct inode* dir_node = malloc(sizeof(struct inode));
+		lseek(fd, INODE_OFFSET+inum_desired*sizeof(struct inode), SEEK_SET);
+		read(fd, (void*)dir_node, sizeof(struct inode));
+		int dir_fileNum = dir_node->file_num;
+
+		//load the current directory data block into ram
+		DIR_NODE* dir_content = malloc(BLOCK_SIZE);
+		lseek(fd, dir_node->direct_blk[0], SEEK_SET);
+		read(fd, dir_content, BLOCK_SIZE);
+
+		for(j=0; j<dir_fileNum; j++){
+			printf("j=%d, %s == %s ????\n",j,str[i],(dir_content[j*sizeof(DIR_NODE)]).dir);
+			if (strcmp(str[i],(dir_content[j*sizeof(DIR_NODE)]).dir)==0){
+				inum_desired = (dir_content[j*sizeof(DIR_NODE)]).inode_number;
+				if(i==count_slash-1){
+					return inum_desired;
+				}
+				break;
+			}
 		}
 	}
+	return -1; //no such file
 
 }
 
