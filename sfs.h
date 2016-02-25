@@ -95,10 +95,33 @@ int read_t(int inode_number, int offset, void *buf, int count){
 		return 0;
 	}
 
+	int byteRead = 0;
+	//read smaller side
+	if(temp->i_size > count){
+		byteRead = count;
+	}else{
+		byteRead = temp->i_size;
+	}
+
 	lseek(fd, temp->direct_blk[0]+offset, SEEK_SET);
-	return read(fd, buf, count);
+	return read(fd, buf, byteRead);
 }
 
+//write count byte to buf starting at offset
+//number of bytes written may be less than count if there is insufficient space
 int write_t(int inode_number, int offset, void *buf, int count){
+	int fd = open("HD", O_RDWR, 660);
+	struct inode* temp = malloc(sizeof(struct inode));
+	lseek(fd, INODE_OFFSET+inode_number*sizeof(struct inode), SEEK_SET);
+	read(fd, (void*)temp, sizeof(struct inode));
 
+	lseek(fd, temp->direct_blk[0]+offset, SEEK_SET);
+
+	int byteWrite = 0;
+	if(BLOCK_SIZE - offset > count){
+		byteWrite = count;
+	}else{
+		byteWrite = (BLOCK_SIZE - offset);
+	}
+	return write(fd, buf, byteWrite);
 }

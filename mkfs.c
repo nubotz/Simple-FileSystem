@@ -57,6 +57,7 @@ int main(){
 	//add some file to test
 	//add hi.txt
 	(temp->file_num)++;
+	temp->i_size += sizeof(DIR_NODE);
 	lseek(fd, INODE_OFFSET, SEEK_SET);
 	write(fd, (void *)temp, sizeof(struct inode));
 	//modify the data block
