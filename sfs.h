@@ -37,10 +37,8 @@ typedef struct dir_mapping{ /* Record file information in directory file */
 //returns inode number of file or -1 if error
 //flag 0=new file; 1=new dir; 2=existing file;
 int open_t(const char *pathname, int flags){
-
-	//printf("I am open_t, I get pathname %s\n",pathname);
-  //split the pathname
-  int count_layer = 0;
+	//split the pathname
+	int count_layer = 0;
 	char* path_name = malloc(11);
 	strcpy(path_name, pathname);
 	char* str[11];
@@ -55,11 +53,14 @@ int open_t(const char *pathname, int flags){
 	
 	//printf("count_layer == %d",count_layer);
 	if(str[0] == NULL){
+		//pathname is root
 		return 0;
 	}
 
+
 	int fd = open("HD", O_RDWR, 660);
 
+	//go through each layer
 	int inum_desired = 0;//start from root inode_num 0
 	int i, j;
 	for(i=0; i<count_layer; i++){
@@ -74,7 +75,7 @@ int open_t(const char *pathname, int flags){
 		lseek(fd, dir_node->direct_blk[0], SEEK_SET);
 		read(fd, dir_content, BLOCK_SIZE);
 
-
+		int foundTheFile = 0;
 		for(j=0; j<dir_fileNum; j++){
 			//printf("j=%d, %s == %s ????\n",j,str[i],(dir_content[j]).dir);
 			if (strcmp(str[i],(dir_content[j]).dir)==0){
@@ -82,12 +83,83 @@ int open_t(const char *pathname, int flags){
 				if(i==count_layer-1){
 					return inum_desired;
 				}
+				foundTheFile = 1;
 				break;
 			}
 		}
-	}
-	return -1; //no such file
 
+		if(!foundTheFile){
+			if(flags == 2){
+				return -1;//existing file not found
+			}else{
+				//create that dir / file
+				//modify parent inode
+				//get superblock
+				struct superblock* sb = malloc(sizeof(struct superblock));
+				lseek(fd, SB_OFFSET, SEEK_SET);
+				read(fd, (void*)sb, sizeof(struct superblock));
+
+				//modify parent inode
+				int parent_inode_num = dir_node->i_number;
+				dir_node->file_num++;
+
+				//make new inode
+				struct inode* temp = malloc(sizeof(struct inode));
+				temp->i_number = sb->next_available_inode;
+				temp->i_mtime = time(0);
+				if(flags == 0){//if file
+					temp->i_type = 1;
+					temp->file_num = 0;
+				}else if(flags == 1){
+					temp->i_type = 0;
+					temp->file_num = 2;//pre define . and ..
+				}
+				temp->i_size = 0;
+				temp->i_blocks = 1;
+				temp->direct_blk[0] = DATA_OFFSET + sb->next_available_blk * BLOCK_SIZE;
+
+				//write back sb, parent inode and new inode
+				sb->next_available_inode++;
+				sb->next_available_blk++;
+
+				lseek(fd, SB_OFFSET, SEEK_SET);
+				write(fd, (void *)sb, sizeof(struct superblock));
+
+				lseek(fd, INODE_OFFSET+dir_node->i_number*sizeof(struct inode), SEEK_SET);
+				write(fd, dir_node, sizeof(struct inode));
+
+				lseek(fd, INODE_OFFSET+temp->i_number*sizeof(struct inode), SEEK_SET);
+				write(fd, temp, sizeof(struct inode));
+
+				//add new folder to parent's data block list
+				DIR_NODE* temp_dir = malloc(sizeof(DIR_NODE));
+				strcpy(temp_dir->dir,str[i]);
+				temp_dir->inode_number = temp->i_number;
+				lseek(fd, dir_node->direct_blk[0]+ (dir_node->file_num-1)*sizeof(DIR_NODE), SEEK_SET);
+				write(fd, temp_dir, sizeof(DIR_NODE));
+
+				if (i==count_layer-1 && flags==0 ){
+					//if last layer and it is a file, do nothing
+				}else{
+					//add . and .. directory
+					DIR_NODE* dir_content=malloc(sizeof(DIR_NODE));
+					strcpy(dir_content->dir,".");
+					dir_content->inode_number = temp->i_number;
+
+					lseek(fd, temp->direct_blk[0], SEEK_SET);
+					write(fd, (void *)dir_content, sizeof(DIR_NODE));
+
+					DIR_NODE* parent_dir=malloc(sizeof(DIR_NODE));
+					strcpy(parent_dir->dir,"..");
+					parent_dir->inode_number = dir_node->i_number;
+					write(fd, (void *)parent_dir, sizeof(DIR_NODE));
+				}
+				inum_desired = temp->i_number;
+			}
+		}
+
+		
+	}//end for i
 }
 
 //read up to count bytes from the inode number file

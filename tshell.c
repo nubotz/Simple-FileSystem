@@ -45,7 +45,11 @@ int main(){
 				}
 			}
 		}else if(strcmp(str_split[0], "mkdir_t") == 0){
-			mkdir_t(currentPath, str_split[1]);
+			//mkdir_t(currentPath, str_split[1]);
+			char absPath[30];
+			strcat(absPath,currentPath);
+			strcat(absPath,str_split[1]);
+			open_t(absPath,1);
 			printf("done mkdir_t\n");
 		}else if(strcmp(str_split[0], "external_cp\n") == 0){
 			if(external_cp(str_split[1], str_split[2]) < 0){
@@ -100,5 +104,5 @@ int ls_t(char *currentPath){
 }
 
 int external_cp(char* real_path, char* sfs_path){
-
+	int fd = open (real_path, O_RDWR, 660);
 }
