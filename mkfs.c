@@ -45,6 +45,12 @@ int main(){
 	lseek(fd, INODE_OFFSET, SEEK_SET);
 	write(fd, (void *)i_node, sizeof(struct inode));
 
+	//update the sb
+	sb->next_available_inode++;
+	sb->next_available_blk++;
+	lseek(fd, SB_OFFSET, SEEK_SET);
+	write(fd, (void *)sb, sizeof(struct superblock));
+
 	//read back the root directory information
 	lseek(fd, INODE_OFFSET, SEEK_SET);
 	struct inode* temp = malloc(sizeof(struct inode));

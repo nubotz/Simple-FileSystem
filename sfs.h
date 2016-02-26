@@ -133,3 +133,62 @@ int write_t(int inode_number, int offset, void *buf, int count){
 	}
 	return write(fd, buf, byteWrite);
 }
+
+int mkdir_t(char* currentDir, char* dirName){
+	//get superblock
+	int fd = open("HD", O_RDWR, 660);
+	struct superblock* sb = malloc(sizeof(struct superblock));
+	lseek(fd, SB_OFFSET, SEEK_SET);
+	read(fd, (void*)sb, sizeof(struct superblock));
+
+	//modify parent inode
+	int parent_inode_num = open_t(currentDir, 2);
+	struct inode* parent_inode = malloc(sizeof(struct inode));
+	lseek(fd, INODE_OFFSET+parent_inode_num*sizeof(struct inode), SEEK_SET);
+	read(fd, (void*)parent_inode, sizeof(struct inode));
+	parent_inode->file_num++;
+
+	//make new inode
+	struct inode* temp = malloc(sizeof(struct inode));
+	temp->i_number = sb->next_available_inode;
+	temp->i_mtime = time(0);
+	temp->i_type = 0;
+	temp->i_size = 0;
+	temp->i_blocks = 1;
+	temp->direct_blk[0] = DATA_OFFSET + sb->next_available_blk * BLOCK_SIZE;
+	temp->file_num = 2; //pre define . and ..
+
+	//write back sb, parent inode and new inode
+	sb->next_available_inode++;
+	sb->next_available_blk++;
+
+	lseek(fd, SB_OFFSET, SEEK_SET);
+	write(fd, (void *)sb, sizeof(struct superblock));
+
+	lseek(fd, INODE_OFFSET+parent_inode_num*sizeof(struct inode), SEEK_SET);
+	write(fd, parent_inode, sizeof(struct inode));
+
+	lseek(fd, INODE_OFFSET+temp->i_number*sizeof(struct inode), SEEK_SET);
+	write(fd, temp, sizeof(struct inode));
+
+	//add new folder to parent's data block list
+	DIR_NODE* parent_data_blk = malloc(sizeof(BLOCK_SIZE));
+	
+
+	
+
+
+
+	//add . and .. directory
+	DIR_NODE* dir_content=malloc(sizeof(DIR_NODE));
+	strcpy(dir_content->dir,".");
+	dir_content->inode_number = temp->i_number;
+
+	lseek(fd, temp->direct_blk[0], SEEK_SET);
+	write(fd, (void *)dir_content, sizeof(DIR_NODE));
+
+	DIR_NODE* parent_dir=malloc(sizeof(DIR_NODE));
+	strcpy(parent_dir->dir,"..");
+	dir_content->inode_number = parent_inode_num;
+	write(fd, (void *)dir_content, sizeof(DIR_NODE));
+}
