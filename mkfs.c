@@ -68,34 +68,5 @@ int main(){
 	strcpy(dir_content->dir,"..");
 	write(fd, (void *)dir_content, sizeof(DIR_NODE));
 
-/*
-	//add some file to test
-	//add hi.txt
-	(temp->file_num)++;
-	temp->i_size += sizeof(DIR_NODE);
-	lseek(fd, INODE_OFFSET, SEEK_SET);
-	write(fd, (void *)temp, sizeof(struct inode));
-	//modify the data block
-	DIR_NODE* dir_content=malloc(sizeof(DIR_NODE));
-	strcpy(dir_content->dir,"hi.txt");
-	dir_content->inode_number=123;
-
-	lseek(fd, temp->direct_blk[0], SEEK_SET);
-	write(fd, (void *)dir_content, sizeof(DIR_NODE));
-*/
-	printf("##modified test file, root inode num is %i, create time is %i, file_num is %d\n", temp->i_number, (int)temp->i_mtime, temp->file_num);
-
-
-
-
-
-///////////////////////// end test
-
-	//test sfs open_t(const char *pathname, int flags)
-	int mynum = open_t("/hi.txt",0);
-	printf("open_t(hi.txt)=%d",mynum);
-
-
-
 	return 0;
 }

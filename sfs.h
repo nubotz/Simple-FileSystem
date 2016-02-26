@@ -38,7 +38,7 @@ typedef struct dir_mapping{ /* Record file information in directory file */
 //flag 0=new file; 1=new dir; 2=existing file;
 int open_t(const char *pathname, int flags){
 
-	printf("I am open_t, I get pathname %s\n",pathname);
+	//printf("I am open_t, I get pathname %s\n",pathname);
   //split the pathname
   int count_layer = 0;
 	char* path_name = malloc(11);

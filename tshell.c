@@ -20,19 +20,20 @@ int main(){
 		fgets (str, 100, stdin);
 
 		//split the input, if any
-		char* str_split[2];
+		char* str_split[3];
 		str_split[0] = strtok(str, " ");
-		str_split[1] = strtok(NULL, "\n");
-		printf("str_split[0]=%s, str_split[1]=%s",str_split[0],str_split[1]);
+		str_split[1] = strtok(NULL, " ");
+		str_split[2] = strtok(NULL, "\n");
+		//printf("str_split[0]=%s, str_split[1]=%s",str_split[0],str_split[1]);
 
 		if(strcmp(str_split[0], "ls_t\n") == 0){
 			ls_t(currentPath);
 			printf("done ls_t\n");
 		}else if(strcmp(str_split[0], "cd_t") == 0){
 			int inode_num = open_t(str_split[1], 2);
-			printf("!!!!!!!!! inode_num is%d",inode_num);
+			//printf("!!!!!!!!! inode_num is%d",inode_num);
 			if(inode_num == -1){
-				printf("no such absolute path\n");
+				printf("plz make sure it's correct absolute path, e.g. /mnt/abc/\n");
 			}else{
 				int fd = open("HD", O_RDWR, 660);
 				struct inode* temp = malloc(sizeof(struct inode));
@@ -47,7 +48,11 @@ int main(){
 			mkdir_t(currentPath, str_split[1]);
 			printf("done mkdir_t\n");
 		}else if(strcmp(str_split[0], "external_cp\n") == 0){
-
+			if(external_cp(str_split[1], str_split[2]) < 0){
+				printf("err");
+			}else{
+				printf("done");
+			}
 		}else if(strcmp(str_split[0], "cp_t\n") == 0){
 
 		}else if(strcmp(str_split[0], "cat_t\n") == 0){
@@ -92,5 +97,8 @@ int ls_t(char *currentPath){
 
     printf("%d\t%d\t%d\t%d\t%s\n", inode_number, (int)each_inode->i_mtime, each_inode->i_type, each_inode->i_size, dir_node[i].dir);
   }
+}
+
+int external_cp(char* real_path, char* sfs_path){
 
 }
