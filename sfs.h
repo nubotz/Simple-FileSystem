@@ -73,16 +73,17 @@ int loadDirContent(DIR_NODE* dir_node, int fileNum, struct inode* i_node){
 
 	int i;
 	for(i=0;i<fileNum;i++){
-		read(fd, dir_node, sizeof(DIR_NODE));
+		read(fd, &dir_node[i], sizeof(DIR_NODE));
 		printf("loadfunction: done %d\n",i);
 	}
-	close(fd)
+	close(fd);
 	return 1;
 }
 
 //returns inode number of file or -1 if error
 //flag 0=new file; 1=new dir; 2=existing file;
 int open_t(const char *pathname, int flags){
+	//printf("open_t: received %s\n",pathname);
 	//split the pathname
 	int count_layer = 0;
 	char* path_name = malloc(11);
@@ -190,8 +191,6 @@ int open_t(const char *pathname, int flags){
 				inum_desired = temp->i_number;
 			}
 		}
-
-
 	}//end for i
 }
 

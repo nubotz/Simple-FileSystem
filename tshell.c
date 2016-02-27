@@ -14,7 +14,6 @@ int main(){
 	printf("tshell###\n$");
 	char* currentPath = malloc(1024);
 	strcpy(currentPath,"/");
-	char* newDir ;
 	while(1){
 		char str[100];
 		fgets (str, 100, stdin);
@@ -49,10 +48,12 @@ int main(){
 			}
 		}else if(strcmp(str_split[0], "mkdir_t") == 0){
 			//mkdir_t(currentPath, str_split[1]);
-			char absPath[30];
+			char* absPath = calloc(1,100);
 			strcat(absPath,currentPath);
 			strcat(absPath,str_split[1]);
+			printf("strcmp: absPath is %s",absPath);
 			open_t(absPath,1);
+			free(absPath);
 			printf("done mkdir_t\n");
 		}else if(strcmp(str_split[0], "external_cp") == 0){
 			if(external_cp(str_split[1], str_split[2]) < 0){
@@ -69,9 +70,9 @@ int main(){
 		}else{
 			printf("unknown command %s",str);
 		}
+
 		printf("%s$",currentPath);
 	}
-
 
 }
 
@@ -84,7 +85,7 @@ int ls_t(char *currentPath){
   //printf("node_num here is %d", node_num);
   DIR_NODE dir_node[fileNum];
 	printf("fileNum is %d, temp.time is %d",fileNum,(int)temp.i_mtime);
-	loadDirContent(dir_node,fileNum,&temp);
+	loadDirContent(&dir_node[0],fileNum,&temp);
 
   int i;
   printf("i_num\tc_time\tf_type\tsize\tname\n");
