@@ -39,9 +39,7 @@ int main(){
 	saveInode(i_node);
 
 	//add . and ..
-	DIR_NODE dir_content={};
-	strcpy(dir_content.dir,".");
-	dir_content.inode_number=0;
+	DIR_NODE dir_content={"1a",0};
 
 	int fd = open ("HD", O_RDWR, 660);
 	lseek(fd, DATA_OFFSET, SEEK_SET);
