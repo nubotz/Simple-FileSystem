@@ -49,6 +49,9 @@ int main(){
 			char absPath[30];
 			strcat(absPath,currentPath);
 			strcat(absPath,str_split[1]);
+			if (absPath[(int)strlen(absPath)-1] == '\n'){
+				absPath[(int)strlen(absPath)-1] = '\0';
+			}
 			open_t(absPath,1);
 			printf("done mkdir_t\n");
 		}else if(strcmp(str_split[0], "external_cp\n") == 0){
