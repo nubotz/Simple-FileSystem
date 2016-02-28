@@ -11,12 +11,13 @@
 #include "sfs.h"
 
 int main(){
-	printf("tshell###\n$");
+	printf("#######tshell#######\n###tshell[/]$");
 	char* currentPath = malloc(1024);
 	strcpy(currentPath,"/");
 	while(1){
 		char str[100];
 		fgets (str, 100, stdin);
+		int childpid = 0;
 
 		if (strlen(str)>2 && str[(int)strlen(str)-1] == '\n'){
 			str[(int)strlen(str)-1] = '\0';
@@ -28,49 +29,74 @@ int main(){
 		str_split[2] = strtok(NULL, " ");
 
 		if(strcmp(str_split[0], "ls_t") == 0){
-			ls_t(currentPath);
-			printf("done ls_t");
+			if ((childpid = fork()) == 0){
+				ls_t(currentPath);
+				exit(0);
+			}else{
+				wait();
+			}
+
 		}else if(strcmp(str_split[0], "cd_t") == 0){
 			int inode_num = open_t(str_split[1], 2);
-			//printf("!!!!!!!!! inode_num is%d",inode_num);
 			if(inode_num == -1){
 				printf("plz make sure it's correct absolute path, e.g. /mnt/abc/\n");
 			}else{
-				int fd = open("HD", O_RDWR, 660);
 				struct inode temp = getInode(inode_num);
 				//if it is dir but not a file
 				if (temp.i_type == 0){
 					strcpy(currentPath,str_split[1]);
 				}
 			}
+
 		}else if(strcmp(str_split[0], "mkdir_t") == 0){
-			char* absPath = calloc(1,100);
-			strcat(absPath,currentPath);
-			strcat(absPath,"/");
-			strcat(absPath,str_split[1]);
-			open_t(absPath,1);
-			free(absPath);
-			printf("done mkdir_t\n");
-		}else if(strcmp(str_split[0], "external_cp") == 0){
-			if(external_cp(str_split[1], str_split[2]) < 0){
-				printf("err");
+			if ((childpid = fork()) == 0){
+				char* absPath = calloc(1,100);
+				strcat(absPath,currentPath);
+				strcat(absPath,"/");
+				strcat(absPath,str_split[1]);
+				open_t(absPath,1);
+				free(absPath);
+				exit(0);
 			}else{
-				printf("done");
+				wait();
 			}
+
+		}else if(strcmp(str_split[0], "external_cp") == 0){
+			if ((childpid = fork()) == 0){
+				if(external_cp(str_split[1], str_split[2]) < 0){
+					printf("err");
+				}else{
+					printf("done");
+				}
+				exit(0);
+			}else{
+				wait();
+			}
+
 		}else if(strcmp(str_split[0], "cp_t") == 0){
-			cp_t(str_split[1], str_split[2]);
-			printf("done cp_t\n");
+			if ((childpid = fork()) == 0){
+				cp_t(str_split[1], str_split[2]);
+				exit(0);
+			}else{
+				wait();
+			}
+
 		}else if(strcmp(str_split[0], "cat_t") == 0){
-			cat_t(str_split[1]);
-			printf("done cat_t\n");
+			if ((childpid = fork()) == 0){
+				cat_t(str_split[1]);
+				exit(0);
+			}else{
+				wait();
+			}
+
 		}else if(strcmp(str_split[0], "exit") == 0){
+			free(currentPath);
 			return 1;
 		}else{
 			printf("unknown command %s",str);
 		}
-		printf("%s$",currentPath);
+		printf("###tshell[%s]$",currentPath);
 	}
-
 }
 
 int ls_t(char *currentPath){
@@ -88,7 +114,7 @@ int ls_t(char *currentPath){
     int inode_number = dir_node[i].inode_number;
 	  struct inode each_inode = getInode(inode_number);
 
-    printf("%d\t%d\t%d\t%d\t%s\n", inode_number, (int)each_inode.i_mtime, each_inode.i_type, each_inode.i_size, dir_node[i].dir);
+    printf("%d\t%d\t%d\t%d\t%s\n", inode_number, (int)(each_inode.i_mtime), each_inode.i_type, each_inode.i_size, dir_node[i].dir);
   }
 }
 
