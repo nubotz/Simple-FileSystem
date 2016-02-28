@@ -33,6 +33,10 @@ typedef struct dir_mapping{ /* Record file information in directory file */
 	int inode_number; /* The corresponding inode number */
 }DIR_NODE;
 
+struct indir_addr{
+	int blk_addr;//pointer to data block
+};
+
 struct inode getInode(int inode_num){
 	struct inode i_node = {};
 	int fd = open("HD", O_RDWR, 660);
@@ -74,7 +78,6 @@ int loadDirContent(DIR_NODE* dir_node, int fileNum, struct inode* i_node){
 	int i;
 	for(i=0;i<fileNum;i++){
 		read(fd, &dir_node[i], sizeof(DIR_NODE));
-		printf("loadfunction: done %d\n",i);
 	}
 	close(fd);
 	return 1;
@@ -83,22 +86,18 @@ int loadDirContent(DIR_NODE* dir_node, int fileNum, struct inode* i_node){
 //returns inode number of file or -1 if error
 //flag 0=new file; 1=new dir; 2=existing file;
 int open_t(const char *pathname, int flags){
-	//printf("open_t: received %s\n",pathname);
 	//split the pathname
 	int count_layer = 0;
 	char* path_name = malloc(11);
 	strcpy(path_name, pathname);
 	char* str[11];
 	str[0] = strtok(path_name, "/");
-	printf("str[%d]=%s\n",count_layer,str[count_layer]);
 	count_layer++;
 
 	while((str[count_layer] = strtok(NULL, "/"))!=NULL){
-		printf("str[%d]=%s\n",count_layer,str[count_layer]);
 		count_layer++;
 	}
 
-	//printf("count_layer == %d",count_layer);
 	if(str[0] == NULL){
 		//pathname is root
 		return 0;
@@ -141,10 +140,6 @@ int open_t(const char *pathname, int flags){
 				//get superblock
 				struct superblock sb = getSB();
 
-				//modify parent inode
-				int parent_inode_num = dir_node.i_number;
-				dir_node.file_num++;
-
 				//make new inode
 				struct inode* temp = malloc(sizeof(struct inode));
 				temp->i_number = sb.next_available_inode;
@@ -161,6 +156,11 @@ int open_t(const char *pathname, int flags){
 
 				temp->i_blocks = 1;
 				temp->direct_blk[0] = DATA_OFFSET + sb.next_available_blk * BLOCK_SIZE;
+
+				//modify parent inode
+				int parent_inode_num = dir_node.i_number;
+				dir_node.file_num++;
+				dir_node.i_size += temp->i_size;
 
 				//write back sb, parent inode and new inode
 				sb.next_available_inode++;
@@ -189,51 +189,138 @@ int open_t(const char *pathname, int flags){
 					write(fd, &parent_dir, sizeof(DIR_NODE));
 				}
 				inum_desired = temp->i_number;
+
 			}
 		}
 	}//end for i
+	return inum_desired;
 }
 
 //read up to count bytes from the inode number file
 //starting at offset, save into buf
 //return 0 if offset exceed file size; return -1 if error; return number of byte read.
 int read_t(int inode_number, int offset, void *buf, int count){
+	struct inode temp = getInode(inode_number);
 	int fd = open("HD", O_RDWR, 660);
-	struct inode* temp = malloc(sizeof(struct inode));
-	lseek(fd, INODE_OFFSET+inode_number*sizeof(struct inode), SEEK_SET);
-	read(fd, (void*)temp, sizeof(struct inode));
-
-	if(offset >= temp->i_size){
+	if(offset > temp.i_size){
 		return 0;
 	}
-
-	int byteRead = 0;
-	//read smaller side
-	if(temp->i_size > count){
-		byteRead = count;
+	int byteToRead = 0;
+	int readByte = 0;
+	if (temp.i_size - offset > count){
+		byteToRead = count;
 	}else{
-		byteRead = temp->i_size;
+		byteToRead = temp.i_size - offset;
 	}
 
-	lseek(fd, temp->direct_blk[0]+offset, SEEK_SET);
-	return read(fd, buf, byteRead);
+	if(byteToRead<= BLOCK_SIZE){
+		//read from blk[0]
+		lseek(fd, temp.direct_blk[0], SEEK_SET);
+		read(fd, buf, byteToRead);
+		readByte += byteToRead;
+	}else{
+		//read from blk[0]
+		lseek(fd, temp.direct_blk[0], SEEK_SET);
+		read(fd, buf, BLOCK_SIZE);
+		readByte += BLOCK_SIZE;
+		//printf("%s",(char*) buf);
+
+		//read from blk[1]
+		lseek(fd, temp.direct_blk[1], SEEK_SET);
+		if(byteToRead - readByte <= BLOCK_SIZE){
+			//printf("buf is %d, buf+readByte i",*buf);
+			read(fd, buf+readByte, byteToRead - readByte);
+			readByte += byteToRead - readByte;
+			printf("%s",(char*) buf);
+
+		}else{
+			read(fd, buf+readByte, BLOCK_SIZE);
+			readByte += BLOCK_SIZE;
+		}
+	}
+	int i;
+	for(i=0;readByte < byteToRead; i++){
+		//load the actual data block addr
+		struct indir_addr addr = {};
+		lseek(fd, temp.indirect_blk+sizeof(int)*i, SEEK_SET);
+		read(fd, &addr, sizeof(int));
+
+		lseek(fd, addr.blk_addr, SEEK_SET);
+		if(byteToRead - readByte <= BLOCK_SIZE){
+			//if last blk
+			read(fd, buf+readByte, byteToRead - readByte);
+			readByte += byteToRead - readByte;
+		}else{
+			read(fd, buf+readByte, BLOCK_SIZE);
+			readByte += BLOCK_SIZE;
+		}
+	}
+	close(fd);
+	return readByte;
 }
 
-//write count byte to buf starting at offset
+//write count byte from buf to HD starting at offset
 //number of bytes written may be less than count if there is insufficient space
 int write_t(int inode_number, int offset, void *buf, int count){
+	struct inode temp = getInode(inode_number);
+	struct superblock sb = getSB();
 	int fd = open("HD", O_RDWR, 660);
-	struct inode* temp = malloc(sizeof(struct inode));
-	lseek(fd, INODE_OFFSET+inode_number*sizeof(struct inode), SEEK_SET);
-	read(fd, (void*)temp, sizeof(struct inode));
+	int blockToWrite = temp.direct_blk[0]+offset;
+	float blkNum = (float)count/(float)BLOCK_SIZE;
+	int writtenByte = 0;
 
-	lseek(fd, temp->direct_blk[0]+offset, SEEK_SET);
 
-	int byteWrite = 0;
-	if(BLOCK_SIZE - offset > count){
-		byteWrite = count;
+	if(blkNum <= 1.0){
+		lseek(fd, blockToWrite, SEEK_SET);
+		write(fd, buf, count);
+		writtenByte = count;
+		//sb.next_available_blk++;
 	}else{
-		byteWrite = (BLOCK_SIZE - offset);
+		//dir blk[0]
+		lseek(fd, blockToWrite, SEEK_SET);
+		write(fd, buf, BLOCK_SIZE);
+		writtenByte += BLOCK_SIZE;
+		//dir blk[1]
+		blockToWrite = temp.direct_blk[1] = DATA_OFFSET + sb.next_available_blk*BLOCK_SIZE;
+		temp.i_blocks++;
+		sb.next_available_blk++;
+		if(blkNum <= 2.0){
+			write(fd, buf+writtenByte, count - BLOCK_SIZE);
+			writtenByte += count - BLOCK_SIZE;
+		}else{
+			write(fd, buf+writtenByte, BLOCK_SIZE);
+			writtenByte += BLOCK_SIZE;
+		}
 	}
-	return write(fd, buf, byteWrite);
+	int i;
+	for(i=0;writtenByte < count;i++){
+		//indir blk
+		if(i==0){
+			temp.indirect_blk = DATA_OFFSET + sb.next_available_blk*BLOCK_SIZE;
+			sb.next_available_blk++;
+		}
+		struct indir_addr indir = {sb.next_available_blk*BLOCK_SIZE};
+		sb.next_available_blk++;
+
+		//write data blk addr to indirect block
+		lseek(fd, temp.indirect_blk+(temp.i_blocks-2)*sizeof(int), SEEK_SET);
+		write(fd, &indir, sizeof(int));
+
+		temp.i_blocks++;
+		lseek(fd, indir.blk_addr, SEEK_SET);
+		if(count-writtenByte <= BLOCK_SIZE){
+			//last blk
+			write(fd, buf+writtenByte, count - writtenByte);
+			writtenByte += count - writtenByte;
+			printf("last block i =%d ***writtenByte now is %d*************\n",i, writtenByte);
+		}else{
+			write(fd, buf+writtenByte, BLOCK_SIZE);
+			writtenByte += BLOCK_SIZE;
+			printf("i =%d ***writtenByte now is %d*************\n",i, writtenByte);
+		}
+	}
+	temp.i_size = writtenByte;
+	saveInode(&temp);
+	saveSB(&sb);
+	return writtenByte;
 }

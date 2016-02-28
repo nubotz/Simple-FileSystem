@@ -18,17 +18,14 @@ int main(){
 		char str[100];
 		fgets (str, 100, stdin);
 
-		if (str[(int)strlen(str)-1] == '\n'){
-			printf("strlen(str)-1 is %d\n", (int)strlen(str)-1);
+		if (strlen(str)>2 && str[(int)strlen(str)-1] == '\n'){
 			str[(int)strlen(str)-1] = '\0';
-			printf("now the string is %s\n",str);
 		}
 		//split the input, if any
 		char* str_split[3];
 		str_split[0] = strtok(str, " ");
 		str_split[1] = strtok(NULL, " ");
 		str_split[2] = strtok(NULL, " ");
-		//printf("str_split[0]=%s, str_split[1]=%s",str_split[0],str_split[1]);
 
 		if(strcmp(str_split[0], "ls_t") == 0){
 			ls_t(currentPath);
@@ -47,11 +44,10 @@ int main(){
 				}
 			}
 		}else if(strcmp(str_split[0], "mkdir_t") == 0){
-			//mkdir_t(currentPath, str_split[1]);
 			char* absPath = calloc(1,100);
 			strcat(absPath,currentPath);
+			strcat(absPath,"/");
 			strcat(absPath,str_split[1]);
-			printf("strcmp: absPath is %s",absPath);
 			open_t(absPath,1);
 			free(absPath);
 			printf("done mkdir_t\n");
@@ -62,15 +58,16 @@ int main(){
 				printf("done");
 			}
 		}else if(strcmp(str_split[0], "cp_t") == 0){
-
+			cp_t(str_split[1], str_split[2]);
+			printf("done cp_t\n");
 		}else if(strcmp(str_split[0], "cat_t") == 0){
-
+			cat_t(str_split[1]);
+			printf("done cat_t\n");
 		}else if(strcmp(str_split[0], "exit") == 0){
-			return 0;
+			return 1;
 		}else{
 			printf("unknown command %s",str);
 		}
-
 		printf("%s$",currentPath);
 	}
 
@@ -82,9 +79,7 @@ int ls_t(char *currentPath){
 	struct inode temp = getInode(node_num);
 	int fileNum = temp.file_num;
 
-  //printf("node_num here is %d", node_num);
   DIR_NODE dir_node[fileNum];
-	printf("fileNum is %d, temp.time is %d",fileNum,(int)temp.i_mtime);
 	loadDirContent(&dir_node[0],fileNum,&temp);
 
   int i;
@@ -98,5 +93,44 @@ int ls_t(char *currentPath){
 }
 
 int external_cp(char* real_path, char* sfs_path){
-	int fd = open (real_path, O_RDWR, 660);
+	/* read the source file */
+	int src = open (real_path, O_RDWR, 660); // file descripter for src file
+	struct stat st; // to get the file size later
+	fstat(src,&st); // get the status of src file
+  ssize_t fileSize = st.st_size; // get the size
+	printf("ex_cp: fileSize = %d",(int)fileSize);
+	char *buf=malloc(fileSize+1); // +1 for null char
+	read(src, buf, fileSize); // read the file to buf
+
+	int newInode = open_t(sfs_path, 0);
+	printf("extern_cp: newInode num is %d\n",newInode);
+	int writeByte = write_t(newInode,0,buf,fileSize);
+	printf("done ext_cp, writByte is %d\n",writeByte);
+	free(buf);
+}
+
+int cp_t(char* src, char* des){
+	int src_num = open_t(src, 3);
+	int des_num = open_t(des, 0);
+
+	//read from src to buf
+	struct inode src_node = getInode(src_num);
+	char* buf[src_node.i_size];
+	read_t(src_num,0,buf, src_node.i_size);
+
+	//write buf to des
+	struct inode des_node = getInode(des_num);
+	write_t(des_num, 0, buf, src_node.i_size);
+
+}
+
+int cat_t(char *filePath){
+	int fileNode = open_t(filePath, 2);
+	printf("fileNode is %d\n",fileNode);
+	struct inode temp = getInode(fileNode);
+
+	char *buf = calloc(1, temp.i_size+1);
+	int readByte = read_t(fileNode,0,buf,temp.i_size);
+	printf("\n%s\n",buf);
+	free(buf);
 }
