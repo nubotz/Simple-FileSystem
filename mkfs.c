@@ -46,6 +46,6 @@ int main(){
 	write(fd, &dir_content, sizeof(DIR_NODE));
 	strcpy(dir_content.dir,"..");
 	write(fd, &dir_content, sizeof(DIR_NODE));
-
+	printf("###Done! made superblock and root directory!\n");
 	return 0;
 }
